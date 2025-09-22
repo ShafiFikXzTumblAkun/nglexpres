@@ -1,24 +1,25 @@
 const express = require('express');
 const axios   = require('axios');
 const crypto  = require('crypto');
-const fs      = require('fs');
+const cors    = require('cors');
 
 const app  = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const usr = require('./kontol.json');
+const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const pick    = arr => arr[randInt(0, arr.length - 1)];
 
-
-const sleep   = ms => new Promise(r => setTimeout(r, ms));
-const randInt = (min,max)=> Math.floor(Math.random()*(max-min+1))+min;
-const pick    = arr=> arr[randInt(0,arr.length-1)];
-
-function freshId(){
+function freshId() {
   return {
     deviceId: crypto.randomUUID(),
     ua: pick(usr)
   };
 }
 
-async function submit(username, msg, id){
+async function submit(username, msg, id) {
   const body = new URLSearchParams({
     username,
     question: msg,
@@ -40,45 +41,44 @@ async function submit(username, msg, id){
   });
 }
 
-app.get('/spam', async (req,res)=>{
-  const {url, message, count=10} = req.query;
-  if(!url||!message) return res.status(400).json({error:'url & message needed'});
+async function handler(req, res) {
+  const { url, message, count = 10 } = req.method === 'GET' ? req.query : req.body;
+  if (!url || !message) return res.status(400).json({ error: 'url & message needed' });
 
   let uname;
-  try{
+  try {
     uname = new URL(url).pathname.split('/').filter(Boolean).pop();
-    if(!uname) throw 0;
-  }catch{ return res.status(400).json({error:'bad url'}); }
+    if (!uname) throw 0;
+  } catch { return res.status(400).json({ error: 'bad url' }); }
 
-  const max = Math.min(parseInt(count)||10, 1000);
-  const out = {ok:0, fail:0};
+  const max  = Math.min(parseInt(count) || 10, 1000);
+  const out  = { ok: 0, fail: 0 };
   const maxRetry = 3;
   const baseDelay = 600;
 
-  for(let i=1;i<=max;i++){
+  for (let i = 1; i <= max; i++) {
     let ok = false;
     let tryCount = 0;
 
-    while(!ok && tryCount < maxRetry){
+    while (!ok && tryCount < maxRetry) {
       const id = freshId();
-      try{
+      try {
         await submit(uname, message, id);
-        ok = true; out.ok++;
-      }catch{
+        ok = true;
+        out.ok++;
+      } catch {
         tryCount++;
-        if(tryCount >= maxRetry) out.fail++;
-        else await sleep(randInt(400,800)*tryCount);
+        if (tryCount >= maxRetry) out.fail++;
       }
     }
 
-    if(i<max) await sleep(randInt(baseDelay*0.5, baseDelay*1.5));
+    if (i < max) await new Promise(r => setTimeout(r, randInt(baseDelay * 0.5, baseDelay * 1.5)));
   }
 
-  res.json({uname, message, sent:max, ...out});
-});
+  res.json({ uname, message, sent: max, ...out });
+}
 
-app.get("/", (req, res) => {
-  res.json({ message: "ngga ada html jir😂" });
-});
+app.all('/spam', handler);
+app.all('/', (req, res) => res.json({ message: 'ngga ada html jir😂' }));
 
 module.exports = app;
