@@ -76,4 +76,8 @@ app.get('/spam', async (req,res)=>{
   res.json({uname, message, sent:max, ...out});
 });
 
+app.get("/", (req, res) => {
+  res.json({ message: "ngga ada html jir😂" });
+});
+
 module.exports = app;
