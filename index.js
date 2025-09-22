@@ -4,7 +4,8 @@ const crypto  = require('crypto');
 const fs      = require('fs');
 
 const app  = express();
-const usr  = JSON.parse(fs.readFileSync('kontol.json','utf8'));
+const usr = require('./kontol.json');
+
 
 const sleep   = ms => new Promise(r => setTimeout(r, ms));
 const randInt = (min,max)=> Math.floor(Math.random()*(max-min+1))+min;
